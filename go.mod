@@ -2,7 +2,10 @@ module github.com/slh335/mc-modpack-manager
 
 go 1.22.5
 
-require github.com/spf13/cobra v1.8.1
+require (
+	github.com/spf13/cobra v1.8.1
+	github.com/valyala/fastjson v1.6.4
+)
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
