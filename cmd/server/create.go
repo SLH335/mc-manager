@@ -1,4 +1,4 @@
-package cmd
+package server
 
 import (
 	"fmt"
@@ -48,8 +48,6 @@ var createCmd = &cobra.Command{
 		}
 		fmt.Println("Downloaded server " + fileName)
 
-		os.WriteFile(filepath.Join(dir, "start.sh"), []byte(fmt.Sprintf("java -Xmx2G -jar %s nogui", fileName)), 0755)
-
 		command := exec.Command("sh", "start.sh")
 		command.Dir = dir
 		err = command.Run()
@@ -64,7 +62,7 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(createCmd)
+	serverCmd.AddCommand(createCmd)
 
 	// Here you will define your flags and configuration settings.
 

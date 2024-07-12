@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/valyala/fastjson"
 )
 
-func DownloadLatestFabricServer(mcVersion, dir string) (fileName string, err error) {
+func DownloadLatestFabricServer(mcVersion, dir string) (filename string, err error) {
 	serverUrl, err := getLatestFabricServerUrl(mcVersion)
 	if err != nil {
 		return "", err
@@ -22,9 +23,9 @@ func DownloadLatestFabricServer(mcVersion, dir string) (fileName string, err err
 	}
 	defer res.Body.Close()
 
-	fileName = strings.Split(res.Header["Content-Disposition"][0], "\"")[1]
+	filename = strings.Split(res.Header["Content-Disposition"][0], "\"")[1]
 
-	file, err := os.Create(filepath.Join(dir, fileName))
+	file, err := os.Create(filepath.Join(dir, filename))
 	if err != nil {
 		return "", err
 	}
@@ -35,7 +36,45 @@ func DownloadLatestFabricServer(mcVersion, dir string) (fileName string, err err
 		return "", err
 	}
 
-	return fileName, nil
+	writeStartScript(filename, dir)
+
+	return filename, nil
+}
+
+func UpdateFabricServer(mcVersion string) (err error) {
+	loaderVersion, err := getLatestFabricVersion("loader")
+	if err != nil {
+		return err
+	}
+	installerVersion, err := getLatestFabricVersion("installer")
+	if err != nil {
+		return err
+	}
+	latestFilename := fmt.Sprintf("fabric-server-mc.%s-loader.%s-launcher.%s.jar", mcVersion, loaderVersion, installerVersion)
+
+	filenames, err := filepath.Glob(fmt.Sprintf("fabric-server-mc.%s-loader.*-launcher.*.jar", mcVersion))
+	if err != nil {
+		return err
+	}
+	slices.Sort(filenames)
+	currentFilename := filenames[len(filenames)-1]
+
+	if latestFilename > currentFilename {
+		_, err = DownloadLatestFabricServer("1.21", "./")
+		if err != nil {
+			return err
+		}
+		os.Remove(currentFilename)
+		fmt.Println("Updated server software to", latestFilename)
+	} else {
+		fmt.Println("Server software is up to date")
+	}
+
+	return nil
+}
+
+func writeStartScript(filename, dir string) {
+	os.WriteFile(filepath.Join(dir, "start.sh"), []byte(fmt.Sprintf("java -Xmx2G -jar %s nogui", filename)), 0755)
 }
 
 func getLatestFabricServerUrl(mcVersion string) (url string, err error) {
