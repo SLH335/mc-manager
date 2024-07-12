@@ -16,22 +16,22 @@ type ModrinthMod struct {
 	Id            string
 	Slug          string
 	Title         string
-	Description   string
 	Side          string
 	LatestVersion ModrinthModVersion
 }
 
 type ModrinthModVersion struct {
-	Id       string
-	Filename string
-	Url      string
-	Hash     string
-	HashAlgo string
+	Id           string
+	Filename     string
+	Url          string
+	Hash         string
+	HashAlgo     string
+	Dependencies []string
 }
 
 const baseUrl string = "https://api.modrinth.com/v2/"
 
-func GetModrinthModInformation(ids []string, mcVersion string) (mods []ModrinthMod, err error) {
+func GetModrinthModInformation(ids []string, mcVersion string, printProgress bool) (mods []ModrinthMod, err error) {
 	queryParams := url.Values{}
 	queryParams.Set("ids", fmt.Sprintf("[\"%s\"]", strings.Join(ids, "\",\"")))
 
@@ -40,7 +40,8 @@ func GetModrinthModInformation(ids []string, mcVersion string) (mods []ModrinthM
 		return mods, err
 	}
 
-	for _, modData := range jsonData.GetArray() {
+	modCount := len(jsonData.GetArray())
+	for i, modData := range jsonData.GetArray() {
 		clientSide := string(modData.GetStringBytes("client_side"))
 		isClientSide := clientSide == "required" || clientSide == "optional"
 		serverSide := string(modData.GetStringBytes("server_side"))
@@ -55,19 +56,24 @@ func GetModrinthModInformation(ids []string, mcVersion string) (mods []ModrinthM
 		}
 
 		mod := ModrinthMod{
-			Id:          string(modData.GetStringBytes("id")),
-			Slug:        string(modData.GetStringBytes("slug")),
-			Title:       string(modData.GetStringBytes("title")),
-			Description: string(modData.GetStringBytes("description")),
-			Side:        side,
+			Id:    string(modData.GetStringBytes("id")),
+			Slug:  string(modData.GetStringBytes("slug")),
+			Title: string(modData.GetStringBytes("title")),
+			Side:  side,
+		}
+		if printProgress {
+			fmt.Printf("\033[2K\rLoading mod [%d/%d] %s", i+1, modCount, mod.Title)
 		}
 
-		mod.LatestVersion, err = mod.GetLatestVersion(mcVersion)
+		mod.LatestVersion, err = mod.getLatestVersion(mcVersion)
 		if err != nil {
 			return mods, err
 		}
 
 		mods = append(mods, mod)
+	}
+	if printProgress {
+		fmt.Print("\n")
 	}
 	sort.Slice(mods, func(i, j int) bool {
 		return mods[i].Title < mods[j].Title
@@ -76,7 +82,7 @@ func GetModrinthModInformation(ids []string, mcVersion string) (mods []ModrinthM
 	return mods, nil
 }
 
-func (mod ModrinthMod) GetLatestVersion(mcVersion string) (modVersion ModrinthModVersion, err error) {
+func (mod ModrinthMod) getLatestVersion(mcVersion string) (modVersion ModrinthModVersion, err error) {
 	path := fmt.Sprintf(`project/%s/version`, mod.Id)
 	queryParams := url.Values{}
 	queryParams.Set("loaders", fmt.Sprintf("[\"%s\"]", "fabric"))
@@ -87,19 +93,32 @@ func (mod ModrinthMod) GetLatestVersion(mcVersion string) (modVersion ModrinthMo
 		return ModrinthModVersion{}, err
 	}
 
+	found := false
 	for _, file := range jsonData.GetArray("0", "files") {
 		if file.GetBool("primary") && strings.HasSuffix(string(file.GetStringBytes("filename")), ".jar") {
-			return ModrinthModVersion{
+			modVersion = ModrinthModVersion{
 				Id:       string(jsonData.GetStringBytes("0", "id")),
 				Filename: string(file.GetStringBytes("filename")),
 				Url:      string(file.GetStringBytes("url")),
 				Hash:     string(file.GetStringBytes("hashes", "sha512")),
 				HashAlgo: "sha512",
-			}, nil
+			}
+			found = true
+			break
 		}
 	}
 
-	return ModrinthModVersion{}, fmt.Errorf("mod %s has no versions for mc %s", mod.Title, mcVersion)
+	for _, dependency := range jsonData.GetArray("0", "dependencies") {
+		if string(dependency.GetStringBytes("dependency_type")) == "required" {
+			modVersion.Dependencies = append(modVersion.Dependencies, string(dependency.GetStringBytes("project_id")))
+		}
+	}
+
+	if !found {
+		return ModrinthModVersion{}, fmt.Errorf("mod %s has no versions for mc %s", mod.Title, mcVersion)
+	}
+
+	return modVersion, nil
 }
 
 func modrinthRequest(method, path string) (data *fastjson.Value, err error) {
