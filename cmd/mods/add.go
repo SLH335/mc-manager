@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const mcVersion string = "1.21"
-
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add [id or slug]",
@@ -26,6 +24,12 @@ var addCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		loader, mcVersion, err := services.GetVersion()
+		if err != nil {
+			log.Fatal("Error: Version information could not be loaded from index")
+			return
+		}
+
 		modIds := []string{}
 		for _, arg := range args {
 			if arg != "" {
@@ -47,7 +51,7 @@ var addCmd = &cobra.Command{
 			}
 		}
 
-		mods, err := services.GetModrinthModInformation(modIds, mcVersion, true)
+		mods, err := services.GetModrinthModInformation(modIds, loader, mcVersion, true)
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -64,7 +68,7 @@ var addCmd = &cobra.Command{
 				}
 
 			}
-			modDependencies, err := services.GetModrinthModInformation(newDependencies, mcVersion, false)
+			modDependencies, err := services.GetModrinthModInformation(newDependencies, loader, mcVersion, false)
 			if err == nil {
 				mods = append(mods, modDependencies...)
 			}

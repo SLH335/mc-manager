@@ -33,20 +33,21 @@ var createCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		software := strings.ToLower(args[0])
+		loader := strings.ToLower(args[0])
 		mcVersion := args[1]
 		name := strings.Join(args[2:], " ")
-		fmt.Printf("Creating %s server on %s named %s...\n", software, mcVersion, name)
+		fmt.Printf("Creating %s server on %s named %s...\n", loader, mcVersion, name)
 
 		dir := filepath.Base(strings.ReplaceAll(strings.ToLower(name), " ", "-"))
 		os.Mkdir(dir, os.ModePerm)
 
-		fileName, err := services.DownloadLatestFabricServer(mcVersion, dir)
+		fileName, err := services.InstallFabricServer(mcVersion, dir)
 		if err != nil {
 			log.Fatal("Error: Failed to download server")
 			return
 		}
 		fmt.Println("Downloaded server " + fileName)
+		fmt.Println("Installing server...")
 
 		command := exec.Command("sh", "start.sh")
 		command.Dir = dir
@@ -58,6 +59,7 @@ var createCmd = &cobra.Command{
 		fmt.Println("Installed server")
 
 		os.WriteFile(filepath.Join(dir, "eula.txt"), []byte("eula=true"), os.ModePerm)
+		services.InitIndex(loader, mcVersion)
 	},
 }
 

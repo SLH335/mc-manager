@@ -1,6 +1,8 @@
 package mods
 
 import (
+	"log"
+
 	"github.com/slh335/mc-modpack-manager/services"
 	"github.com/spf13/cobra"
 )
@@ -11,6 +13,12 @@ var updateCmd = &cobra.Command{
 	Short: "Update mods",
 	Long:  `Update mods`,
 	Run: func(cmd *cobra.Command, args []string) {
+		loader, mcVersion, err := services.GetVersion()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		modIds := []string{}
 		for _, arg := range args {
 			if arg != "" {
@@ -18,7 +26,7 @@ var updateCmd = &cobra.Command{
 			}
 		}
 
-		services.UpdateMods(modIds)
+		services.UpdateMods(modIds, loader, mcVersion)
 	},
 }
 

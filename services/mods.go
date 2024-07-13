@@ -6,8 +6,85 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 )
+
+func InitIndex(loader, mcVersion string) (err error) {
+	modIndexDir, err := getModIndexDir()
+	if err != nil {
+		return err
+	}
+
+	data := []byte(fmt.Sprintf("loader = '%s'\nmc-version = '%s'", loader, mcVersion))
+	err = os.WriteFile(filepath.Join(modIndexDir, "mc-manager.index.toml"), data, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetVersion() (loader, mcVersion string, err error) {
+	loader, mcVersion, err = getVersionFromIndex()
+	if err != nil {
+		loader, mcVersion, err = DetectVersion()
+		if err != nil {
+			return "", "", err
+		}
+		InitIndex(loader, mcVersion)
+	}
+	return loader, mcVersion, nil
+}
+
+func getVersionFromIndex() (loader, mcVersion string, err error) {
+	modIndexDir, err := getModIndexDir()
+	if err != nil {
+		return "", "", err
+	}
+
+	data, err := os.ReadFile(filepath.Join(modIndexDir, "mc-manager.index.toml"))
+	if err != nil {
+		return "", "", err
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		vals := strings.Split(line, " = ")
+		if len(vals) > 1 {
+			val := strings.TrimSpace(vals[1])
+			val = val[1 : len(val)-1]
+			switch vals[0] {
+			case "loader":
+				loader = val
+			case "mc-version":
+				mcVersion = val
+			}
+		}
+	}
+
+	if loader == "" || mcVersion == "" {
+		return loader, mcVersion, fmt.Errorf("index does not contain version information")
+	}
+
+	return loader, mcVersion, nil
+}
+
+func DetectVersion() (loader, mcVersion string, err error) {
+	files, _ := filepath.Glob("*fabric*.jar")
+	if len(files) > 0 {
+		slices.Sort(files)
+		file := files[len(files)-1]
+
+		pattern := regexp.MustCompile("mc\\.(1(\\.[0-9]{1,2}){1,2})")
+		version := pattern.FindStringSubmatch(file)
+		if version[0] != "" {
+			return "fabric", version[1], nil
+		}
+	}
+
+	return "", "", fmt.Errorf("failed to detect mod loader")
+}
 
 func (mod ModrinthMod) Install() (err error) {
 	modDir, err := getModDir()
@@ -37,7 +114,7 @@ func (mod ModrinthMod) Install() (err error) {
 	return nil
 }
 
-func UpdateMods(modIds []string) (err error) {
+func UpdateMods(modIds []string, loader, mcVersion string) (err error) {
 	modDir, err := getModDir()
 	if err != nil {
 		return err
@@ -54,7 +131,7 @@ func UpdateMods(modIds []string) (err error) {
 	updated := 0
 	for i, mod := range mods {
 		fmt.Printf("\033[2K\rChecking mod [%d/%d] %s", i+1, len(mods), mod.Title)
-		latestVersion, err := mod.getLatestVersion("1.21")
+		latestVersion, err := mod.getLatestVersion(loader, mcVersion)
 		if err != nil {
 			return err
 		}
@@ -70,7 +147,9 @@ func UpdateMods(modIds []string) (err error) {
 			}
 		}
 	}
-	fmt.Print("\n")
+	if len(mods) > 0 {
+		fmt.Print("\n")
+	}
 	if updated == 0 {
 		fmt.Println("All mods up to date")
 	} else {

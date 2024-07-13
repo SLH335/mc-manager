@@ -31,7 +31,7 @@ type ModrinthModVersion struct {
 
 const baseUrl string = "https://api.modrinth.com/v2/"
 
-func GetModrinthModInformation(ids []string, mcVersion string, printProgress bool) (mods []ModrinthMod, err error) {
+func GetModrinthModInformation(ids []string, loader, mcVersion string, printProgress bool) (mods []ModrinthMod, err error) {
 	queryParams := url.Values{}
 	queryParams.Set("ids", fmt.Sprintf("[\"%s\"]", strings.Join(ids, "\",\"")))
 
@@ -65,7 +65,7 @@ func GetModrinthModInformation(ids []string, mcVersion string, printProgress boo
 			fmt.Printf("\033[2K\rLoading mod [%d/%d] %s", i+1, modCount, mod.Title)
 		}
 
-		mod.LatestVersion, err = mod.getLatestVersion(mcVersion)
+		mod.LatestVersion, err = mod.getLatestVersion(loader, mcVersion)
 		if err != nil {
 			return mods, err
 		}
@@ -82,10 +82,10 @@ func GetModrinthModInformation(ids []string, mcVersion string, printProgress boo
 	return mods, nil
 }
 
-func (mod ModrinthMod) getLatestVersion(mcVersion string) (modVersion ModrinthModVersion, err error) {
+func (mod ModrinthMod) getLatestVersion(loader, mcVersion string) (modVersion ModrinthModVersion, err error) {
 	path := fmt.Sprintf(`project/%s/version`, mod.Id)
 	queryParams := url.Values{}
-	queryParams.Set("loaders", fmt.Sprintf("[\"%s\"]", "fabric"))
+	queryParams.Set("loaders", fmt.Sprintf("[\"%s\"]", loader))
 	queryParams.Set("game_versions", fmt.Sprintf("[\"%s\"]", mcVersion))
 
 	jsonData, err := modrinthRequest(http.MethodGet, path+"?"+queryParams.Encode())

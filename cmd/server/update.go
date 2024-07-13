@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/slh335/mc-modpack-manager/services"
@@ -14,10 +15,18 @@ var updateCmd = &cobra.Command{
 	Long:  `update a new Minecraft server and initialize the mod manager`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := services.UpdateFabricServer("1.21")
+		loader, mcVersion, err := services.DetectVersion()
+		fmt.Println("Detected", loader, mcVersion)
 		if err != nil {
 			log.Fatal(err)
 			return
+		}
+		if loader == "fabric" {
+			err = services.UpdateFabricServer(mcVersion)
+			if err != nil {
+				log.Fatal("Error: Failed to update server")
+				return
+			}
 		}
 	},
 }
