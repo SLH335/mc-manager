@@ -15,7 +15,7 @@ var updateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		loader, mcVersion, err := services.GetVersion()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error: Version information could not be loaded")
 			return
 		}
 

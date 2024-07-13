@@ -10,7 +10,7 @@ import (
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
-	Use:   "update [software] [version] [name]",
+	Use:   "update",
 	Short: "update a new Minecraft server and initialize the mod manager",
 	Long:  `update a new Minecraft server and initialize the mod manager`,
 	Args:  cobra.NoArgs,

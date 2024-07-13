@@ -26,7 +26,7 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		loader, mcVersion, err := services.GetVersion()
 		if err != nil {
-			log.Fatal("Error: Version information could not be loaded from index")
+			log.Fatal("Error: Version information could not be loaded")
 			return
 		}
 
