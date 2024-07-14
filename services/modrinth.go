@@ -42,25 +42,8 @@ func GetModrinthModInformation(ids []string, loader, mcVersion string, printProg
 
 	modCount := len(jsonData.GetArray())
 	for i, modData := range jsonData.GetArray() {
-		clientSide := string(modData.GetStringBytes("client_side"))
-		isClientSide := clientSide == "required" || clientSide == "optional"
-		serverSide := string(modData.GetStringBytes("server_side"))
-		isServerSide := serverSide == "required" || serverSide == "optional"
-		side := ""
-		if isClientSide && isServerSide {
-			side = "both"
-		} else if isClientSide {
-			side = "client"
-		} else {
-			side = "server"
-		}
+		mod := parseModInformation(modData)
 
-		mod := ModrinthMod{
-			Id:    string(modData.GetStringBytes("id")),
-			Slug:  string(modData.GetStringBytes("slug")),
-			Title: string(modData.GetStringBytes("title")),
-			Side:  side,
-		}
 		if printProgress {
 			fmt.Printf("\033[2K\rLoading mod [%d/%d] %s", i+1, modCount, mod.Title)
 		}
@@ -80,6 +63,47 @@ func GetModrinthModInformation(ids []string, loader, mcVersion string, printProg
 	})
 
 	return mods, nil
+}
+
+func SearchModrinthMods(search, loader, mcVersion string) (mods []ModrinthMod, err error) {
+	queryParams := url.Values{}
+	queryParams.Set("query", search)
+	queryParams.Set("limit", "100")
+	queryParams.Set("facets", fmt.Sprintf("[[\"categories:%s\"],[\"versions:%s\"],[\"project_type:mod\"]]", loader, mcVersion))
+	data, err := modrinthRequest(http.MethodGet, "search?"+queryParams.Encode())
+
+	for _, modData := range data.GetArray("hits") {
+		mods = append(mods, parseModInformation(modData))
+	}
+
+	return mods, nil
+}
+
+func parseModInformation(modData *fastjson.Value) (mod ModrinthMod) {
+	clientSide := string(modData.GetStringBytes("client_side"))
+	isClientSide := clientSide == "required" || clientSide == "optional"
+	serverSide := string(modData.GetStringBytes("server_side"))
+	isServerSide := serverSide == "required" || serverSide == "optional"
+	side := ""
+	if isClientSide && isServerSide {
+		side = "both"
+	} else if isClientSide {
+		side = "client"
+	} else {
+		side = "server"
+	}
+
+	modId := string(modData.GetStringBytes("id"))
+	if modId == "" {
+		modId = string(modData.GetStringBytes("project_id"))
+	}
+
+	return ModrinthMod{
+		Id:    modId,
+		Slug:  string(modData.GetStringBytes("slug")),
+		Title: string(modData.GetStringBytes("title")),
+		Side:  side,
+	}
 }
 
 func (mod ModrinthMod) getLatestVersion(loader, mcVersion string) (modVersion ModrinthModVersion, err error) {
