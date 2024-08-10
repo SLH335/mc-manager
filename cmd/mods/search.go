@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/slh335/mc-modpack-manager/services"
-	"github.com/slh335/mc-modpack-manager/ui"
+	"github.com/slh335/mc-manager/services"
+	"github.com/slh335/mc-manager/ui"
 	"github.com/spf13/cobra"
 )
 

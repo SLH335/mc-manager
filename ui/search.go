@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/slh335/mc-modpack-manager/services"
+	"github.com/slh335/mc-manager/services"
 )
 
 type searchModel struct {

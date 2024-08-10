@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/slh335/mc-modpack-manager/services"
+	"github.com/slh335/mc-manager/services"
 	"github.com/spf13/cobra"
 )
 

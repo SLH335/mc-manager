@@ -3,7 +3,7 @@ package mods
 import (
 	"fmt"
 
-	"github.com/slh335/mc-modpack-manager/cmd"
+	"github.com/slh335/mc-manager/cmd"
 	"github.com/spf13/cobra"
 )
 
